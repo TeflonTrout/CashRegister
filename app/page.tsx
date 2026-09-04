@@ -1,4 +1,13 @@
+"use client";
+import { useState } from "react";
+import Calculator from "./components/Calculator";
+import FileUploadSection from "./components/FileUploadSection";
+import ErrorSection from "./components/ErrorSection";
+
 export default function Home() {
+  const [isError, setIsError] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-16 sm:py-24">
       <div className="w-full max-w-2xl flex flex-col items-center gap-8 text-center">
@@ -19,19 +28,10 @@ export default function Home() {
             aria-label="Calculator"
             defaultChecked
           />
-          <div
-            role="tabpanel"
-            className="tab-content min-h-72 border-base-300 p-6"
-          >
-            <fieldset className="fieldset w-full">
-              <legend className="fieldset-legend">Transactions</legend>
-              <textarea
-                className="textarea textarea-bordered w-full h-48"
-                placeholder="Enter transaction data..."
-                aria-label="Transaction data"
-              />
-            </fieldset>
-          </div>
+          <Calculator
+            setIsError={setIsError}
+            setErrorMessage={setErrorMessage}
+          />
 
           <input
             type="radio"
@@ -40,23 +40,18 @@ export default function Home() {
             className="tab"
             aria-label="File Upload"
           />
-          <div
-            role="tabpanel"
-            className="tab-content min-h-72 border-base-300 p-6"
-          >
-            <div className="w-full min-h-56 border-2 border-dashed border-base-300 rounded-box p-8 flex flex-col items-center justify-center gap-2 text-base-content/60">
-              <p>Drag and drop a .txt file here</p>
-              <p className="text-sm">or</p>
-              <button type="button" className="btn btn-outline btn-sm">
-                Browse Files
-              </button>
-            </div>
-          </div>
+          <FileUploadSection
+            setIsError={setIsError}
+            setErrorMessage={setErrorMessage}
+          />
         </div>
 
-        <button type="button" className="btn btn-primary btn-wide">
-          Calculate Change
-        </button>
+        {/* Error message */}
+        <ErrorSection
+          isError={isError}
+          errorMessage={errorMessage}
+          setIsError={setIsError}
+        />
       </div>
     </main>
   );

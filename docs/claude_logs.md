@@ -24,3 +24,15 @@ A running log of notable Claude Code conversations for this project.
 - `app/components/Footer.tsx`: switched footer to `bg-secondary` / `text-primary-content` styling.
 
 **Explicitly out of scope for this pass:** calculation logic, API routes, file parsing/validation, extra dependencies beyond daisyUI/lucide-react already present, animations/gradients/dashboards/sidebars.
+
+---
+
+## 2026-09-04 — Tab selector for input method
+
+**Request:** Split `app/page.tsx` into a tab selector with "Calculator" and "File Upload" options — Calculator tab shows the textarea, File Upload tab shows the file drop zone. Include aria labels.
+
+**Changes made:**
+- Replaced the stacked textarea + drop-zone layout in `app/page.tsx` with daisyUI's CSS-only radio-based tabs (`tabs tabs-lift`), using `role="tablist"` / `role="tab"` / `role="tabpanel"` and `aria-label="Calculator"` / `aria-label="File Upload"` on the tab inputs, plus `aria-label="Transaction data"` on the textarea.
+- No client-side state or `"use client"` needed — the tab switching is pure CSS via daisyUI's radio-input pattern, so `page.tsx` stays a server component.
+- The primary "Calculate Change" button remains outside the tabs, applying to whichever input method is active.
+- Verified with `npx tsc --noEmit` — no type errors.

@@ -36,3 +36,19 @@ A running log of notable Claude Code conversations for this project.
 - No client-side state or `"use client"` needed — the tab switching is pure CSS via daisyUI's radio-input pattern, so `page.tsx` stays a server component.
 - The primary "Calculate Change" button remains outside the tabs, applying to whichever input method is active.
 - Verified with `npx tsc --noEmit` — no type errors.
+
+---
+
+## 2026-09-04 — Domain types
+
+**Request:** Begin type generation in `app/lib/types.ts`, covering Currency Denominations, Currency, and all types needed for the problem defined in `README.md`.
+
+**Changes made:**
+- Added `app/lib/types.ts` with:
+  - `MinorUnits` — money represented as an integer in the currency's smallest unit (e.g. cents) to avoid floating-point rounding errors.
+  - `Denomination` (name/pluralName/value/kind) and `DenominationKind` ("bill" | "coin").
+  - `Currency` (code/name/symbol/minorUnitsPerMajorUnit/denominations) and `CurrencyDenominations` (denominations keyed by currency code) — kept currency-agnostic per the README's "new client in France" consideration.
+  - `Transaction` — a parsed "amount owed, amount paid" input line.
+  - `ChangeLineItem` and `ChangeResult` — the denomination breakdown and full result for a transaction, including an `isRandomized` flag for the "divisible by 3" rule.
+- No parsing/calculation logic yet — types only, per current scope.
+- Verified with `npx tsc --noEmit` — no type errors.

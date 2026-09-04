@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   calculateChangeForTransaction,
   parseTransactionLine,
@@ -10,7 +10,7 @@ import {
   CalculateResponseBody,
 } from "@/app/lib/types";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   let body: CalculateRequestBody;
 
   try {

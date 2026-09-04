@@ -55,3 +55,21 @@ export interface ChangeResult {
   /** True when the "owed amount divisible by 3" random rule was applied. */
   isRandomized: boolean;
 }
+
+/** Request body for POST /api/calculate — one raw "amountOwed,amountPaid" line per transaction. */
+export interface CalculateRequestBody {
+  lines: string[];
+}
+
+/** Successful response body for POST /api/calculate. */
+export interface CalculateResponseBody {
+  /** Describes the outcome for debugging; not intended for end-user display. */
+  message: string;
+  results: ChangeResult[];
+}
+
+/** Error response body for POST /api/calculate. */
+export interface CalculateErrorResponseBody {
+  /** Describes what went wrong for debugging; not intended for end-user display. */
+  message: string;
+}

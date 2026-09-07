@@ -84,7 +84,6 @@ export default function Calculator({
       currency,
     };
 
-    console.log(requestBody);
     const res = await fetch("/api/calculate", {
       method: "POST",
       headers: {
@@ -95,9 +94,6 @@ export default function Calculator({
 
     const data: CalculateResponseBody | CalculateErrorResponseBody =
       await res.json();
-
-    console.log(data);
-
     if (res.ok && "results" in data) {
       // Debugging only — never rendered in the UI.
       console.log("[Calculator] /api/calculate:", data.message);

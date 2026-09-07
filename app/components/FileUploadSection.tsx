@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalculateErrorResponseBody,
   CalculateResponseBody,
@@ -21,7 +21,7 @@ export default function FileUploadSection({
   const [calculationResults, setCalculationResults] =
     useState<CalculateResponseBody | null>(null);
 
-  //   Placeholder for the file upload logic
+  // Handle file processing and validation
   const handleFileProcessing = async (file: File) => {
     setFileParseError(false);
     if (file.type !== "text/plain" && file.type !== "text/csv") {
@@ -99,7 +99,7 @@ export default function FileUploadSection({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ lines }),
+        body: JSON.stringify({ lines, currency }),
       });
       const data: CalculateResponseBody | CalculateErrorResponseBody =
         await res.json();
@@ -117,6 +117,19 @@ export default function FileUploadSection({
       }
     }
   };
+
+  // ctrl + enter key press event listener
+  useEffect(() => {
+    const handleCtrlEnterKeyPress = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === "Enter") {
+        handleCalculateChange();
+      }
+    };
+    window.addEventListener("keydown", handleCtrlEnterKeyPress);
+    return () => {
+      window.removeEventListener("keydown", handleCtrlEnterKeyPress);
+    };
+  }, [file, currency, handleCalculateChange]);
 
   return (
     <div role="tabpanel" className="tab-content min-h-72 border-base-300 p-6">

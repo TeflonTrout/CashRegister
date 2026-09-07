@@ -13,10 +13,12 @@ export default function Calculator({
   setIsError,
   setErrorMessage,
   currency,
+  isAdvancedPath,
 }: {
   setIsError: (error: boolean) => void;
   setErrorMessage: (message: string) => void;
   currency?: string;
+  isAdvancedPath: boolean;
 }) {
   const [input, setInput] = useState<string>("");
   const [results, setResults] = useState<ChangeResult[]>([]);
@@ -143,19 +145,21 @@ export default function Calculator({
         </fieldset>
       )}
 
-      <div className="flex items-center gap-2 mt-2">
-        <label htmlFor="allSmallest" className="label label-text">
-          All Smallest Change
-        </label>
-        <input
-          type="checkbox"
-          name="strategy"
-          value="allSmallest"
-          checked={isAllSmallestChecked}
-          onChange={(e) => setIsAllSmallestChecked(e.target.checked)}
-          className="checkbox checkbox-sm ml-4"
-        />
-      </div>
+      {isAdvancedPath && (
+        <div className="flex items-center gap-2 mt-2">
+          <label htmlFor="allSmallest" className="label label-text">
+            All Smallest Change
+          </label>
+          <input
+            type="checkbox"
+            name="strategy"
+            value="allSmallest"
+            checked={isAllSmallestChecked}
+            onChange={(e) => setIsAllSmallestChecked(e.target.checked)}
+            className="checkbox checkbox-sm ml-4"
+          />
+        </div>
+      )}
 
       <button
         type="button"

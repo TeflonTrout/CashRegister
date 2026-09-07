@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   CalculateErrorResponseBody,
   CalculateResponseBody,
@@ -11,15 +11,19 @@ export default function FileUploadSection({
   setIsError,
   setErrorMessage,
   currency,
+  isAdvancedPath,
 }: {
   setIsError: (error: boolean) => void;
   setErrorMessage: (message: string) => void;
   currency?: string;
+  isAdvancedPath: boolean;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [fileParseError, setFileParseError] = useState<boolean>(false);
   const [calculationResults, setCalculationResults] =
     useState<CalculateResponseBody | null>(null);
+  const [isAllSmallestChecked, setIsAllSmallestChecked] =
+    useState<boolean>(false);
 
   // Handle file processing and validation
   const handleFileProcessing = async (file: File) => {
@@ -93,13 +97,19 @@ export default function FileUploadSection({
       .map((line) => line.trim())
       .filter(Boolean);
 
+    const body = {
+      lines,
+      currency,
+      strategyId: isAllSmallestChecked ? "allSmallest" : undefined,
+    };
+
     if (lines.length !== 0) {
       const res = await fetch("/api/calculate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ lines, currency }),
+        body: JSON.stringify(body),
       });
       const data: CalculateResponseBody | CalculateErrorResponseBody =
         await res.json();
@@ -171,6 +181,22 @@ export default function FileUploadSection({
             ))}
           </div>
         </fieldset>
+      )}
+
+      {isAdvancedPath && (
+        <div className="flex items-center gap-2 mt-2">
+          <label htmlFor="allSmallest" className="label label-text">
+            All Smallest Change
+          </label>
+          <input
+            type="checkbox"
+            name="strategy"
+            value="allSmallest"
+            checked={isAllSmallestChecked}
+            onChange={(e) => setIsAllSmallestChecked(e.target.checked)}
+            className="checkbox checkbox-sm ml-4"
+          />
+        </div>
       )}
 
       <div className="mt-4">

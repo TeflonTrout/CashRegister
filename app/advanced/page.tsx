@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Calculator from "../components/Calculator";
 import FileUploadSection from "../components/FileUploadSection";
 import ErrorSection from "../components/ErrorSection";
@@ -8,6 +9,8 @@ export default function Home() {
   const [isError, setIsError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [currency, setCurrency] = useState<string>("USD");
+  const pathname = usePathname();
+  const isAdvancedPath = pathname === "/advanced";
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-16 sm:py-24">
@@ -33,6 +36,7 @@ export default function Home() {
             setIsError={setIsError}
             setErrorMessage={setErrorMessage}
             currency={currency}
+            isAdvancedPath={isAdvancedPath}
           />
 
           <input
@@ -46,6 +50,7 @@ export default function Home() {
             setIsError={setIsError}
             setErrorMessage={setErrorMessage}
             currency={currency}
+            isAdvancedPath={isAdvancedPath}
           />
 
           {/* Create a currency selector */}

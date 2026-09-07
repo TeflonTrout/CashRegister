@@ -59,6 +59,7 @@ export interface ChangeResult {
 /** Request body for POST /api/calculate — one raw "amountOwed,amountPaid" line per transaction. */
 export interface CalculateRequestBody {
   lines: string[];
+  currency?: Currency["code"];
 }
 
 /** Successful response body for POST /api/calculate. */

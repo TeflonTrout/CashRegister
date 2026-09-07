@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
-import Calculator from "./components/Calculator";
-import FileUploadSection from "./components/FileUploadSection";
-import ErrorSection from "./components/ErrorSection";
+import Calculator from "../components/Calculator";
+import FileUploadSection from "../components/FileUploadSection";
+import ErrorSection from "../components/ErrorSection";
 
 export default function Home() {
   const [isError, setIsError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("USD");
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-16 sm:py-24">
@@ -19,7 +20,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div role="tablist" className="tabs tabs-lift w-full flex">
+        <div role="tablist" className="tabs tabs-lift w-full relative">
           <input
             type="radio"
             name="input_method"
@@ -31,6 +32,7 @@ export default function Home() {
           <Calculator
             setIsError={setIsError}
             setErrorMessage={setErrorMessage}
+            currency={currency}
           />
 
           <input
@@ -43,7 +45,24 @@ export default function Home() {
           <FileUploadSection
             setIsError={setIsError}
             setErrorMessage={setErrorMessage}
+            currency={currency}
           />
+
+          {/* Create a currency selector */}
+          <div className="w-1/4 absolute top-2 right-0 flex items-center gap-2">
+            <label htmlFor="currency" className="w-full text-sm font-medium">
+              Currency:
+            </label>
+            <select
+              id="currency"
+              name="currency"
+              onChange={(e) => setCurrency(e.target.value)}
+              className="select select-bordered w-full max-w-xs h-2"
+            >
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
         </div>
 
         {/* Error message */}

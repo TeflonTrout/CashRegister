@@ -12,9 +12,11 @@ const TRANSACTION_LINE_PATTERN = /^\d+(\.\d{1,2})?,\d+(\.\d{1,2})?$/;
 export default function Calculator({
   setIsError,
   setErrorMessage,
+  currency,
 }: {
   setIsError: (error: boolean) => void;
   setErrorMessage: (message: string) => void;
+  currency?: string;
 }) {
   const [input, setInput] = useState<string>("");
   const [results, setResults] = useState<ChangeResult[]>([]);
@@ -51,6 +53,14 @@ export default function Calculator({
     return null;
   };
 
+  const handleCtrlEnterKeyPress = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (event.ctrlKey && event.key === "Enter") {
+      handleCalculateChange();
+    }
+  };
+
   const handleCalculateChange = async () => {
     setIsError(false);
     setErrorMessage("");
@@ -71,8 +81,10 @@ export default function Calculator({
 
     const requestBody: CalculateRequestBody = {
       lines: getTransactionLines(input),
+      currency,
     };
 
+    console.log(requestBody);
     const res = await fetch("/api/calculate", {
       method: "POST",
       headers: {
@@ -107,10 +119,11 @@ export default function Calculator({
           aria-label="Transaction data"
           value={input}
           onChange={handleInputChange}
+          onKeyDown={handleCtrlEnterKeyPress}
         />
       </fieldset>
 
-      {results.length > 0 && (
+      {results.length > 0 ? (
         <fieldset className="fieldset w-full">
           <legend className="fieldset-legend">Output</legend>
           <div className="text-sm flex flex-col items-start gap-1 text-left border border-base-300 rounded-box p-4 w-full">
@@ -122,6 +135,13 @@ export default function Calculator({
             ))}
           </div>
         </fieldset>
+      ) : (
+        <fieldset className="fieldset w-full">
+          <legend className="fieldset-legend">Output</legend>
+          <div className="text-sm flex flex-col items-start gap-1 text-left border border-base-300 rounded-box p-4 w-full">
+            <span className="ml-4 py-2"></span>
+          </div>
+        </fieldset>
       )}
 
       <button
@@ -129,7 +149,7 @@ export default function Calculator({
         className="btn btn-primary btn-wide mt-4"
         onClick={() => handleCalculateChange()}
       >
-        Calculate Change
+        Calculate Change (Ctrl+Enter)
       </button>
     </div>
   );

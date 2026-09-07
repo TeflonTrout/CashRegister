@@ -3,11 +3,12 @@ import {
   calculateChangeForTransaction,
   parseTransactionLine,
 } from "@/app/lib/calculateChange";
-import { DEFAULT_CURRENCY } from "@/app/lib/currencies";
+import { DEFAULT_CURRENCY, CURRENCIES } from "@/app/lib/currencies";
 import {
   CalculateErrorResponseBody,
   CalculateRequestBody,
   CalculateResponseBody,
+  Currency,
 } from "@/app/lib/types";
 
 export async function POST(request: Request) {
@@ -35,11 +36,12 @@ export async function POST(request: Request) {
       .filter((line) => line.length > 0)
       .map((line) => {
         const transaction = parseTransactionLine(line);
-        return calculateChangeForTransaction(transaction, DEFAULT_CURRENCY);
+        const currency: Currency = body.currency ? CURRENCIES[body.currency] : DEFAULT_CURRENCY;
+        return calculateChangeForTransaction(transaction, currency);
       });
 
     return NextResponse.json<CalculateResponseBody>({
-      message: `Calculated change for ${results.length} transaction(s) in ${DEFAULT_CURRENCY.code}.`,
+      message: `Calculated change for ${results.length} transaction(s) in ${body.currency || DEFAULT_CURRENCY.code}.`,
       results,
     });
   } catch (error) {

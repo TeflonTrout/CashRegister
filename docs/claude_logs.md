@@ -82,3 +82,33 @@ A running log of notable Claude Code conversations for this project.
 - `calculateChange.ts`: `formatChangeResult` now joins with `", "` (comma + space) instead of `","`; added an explanatory comment in `minimumChangeBreakdown`.
 
 **Explicitly out of scope for this pass:** file upload parsing/calculation (`FileUploadSection.tsx` untouched), non-USD currency selection in the API (hardcoded to `DEFAULT_CURRENCY` for now).
+
+---
+
+## 2026-09-07 — Strategy/rule refactor of the change calculation
+
+**Request:** Refactor the change calculation so new calculation rules can be added as the project scales. Today there are only two behaviours ("random when the owed amount is divisible by 3" and "minimum change"), but future ones like "all pennies" should be toggleable/selectable. No UI for the picker yet — code preparation only.
+
+**Shape of the refactor:** split the single `calculateChangeForTransaction` if/else into two independent extension points:
+- A **strategy** = *how* to break an amount into denominations (minimum, random, all-smallest).
+- A **rule** = *which* strategy a given transaction gets (e.g. the divisible-by-3 twist).
+
+**Changes made:**
+- Added `app/lib/strategies.ts`:
+  - `minimumChangeStrategy`, `randomChangeStrategy` — the two existing algorithms, moved verbatim behind the `ChangeStrategy` interface.
+  - `allSmallestChangeStrategy` — the "all pennies" case the user named, generalised to any currency's smallest denomination (so it is "one cents" for EUR).
+  - `CHANGE_STRATEGIES` registry plus `getChangeStrategy`, `isChangeStrategyId`, `listChangeStrategies`, and `registerChangeStrategy` (for strategies defined outside the module). Each strategy carries its own `name`/`description`, so a future picker can render the registry directly rather than hardcoding a list.
+- Added `app/lib/changeRules.ts`:
+  - `createDivisibleByRule(divisor, strategyId, priority)` — the README's twist with the divisor and target strategy both configurable, answering "what if the client changes the random divisor?".
+  - `DEFAULT_CHANGE_RULE_SET` — today's behaviour (divisible-by-3 → random, default minimum).
+  - `findMatchingRule` — first match wins, highest `priority` first, ties keeping declaration order.
+- `app/lib/types.ts`: added `ChangeStrategyId`, `ChangeRuleId`, `ChangeStrategyContext`, `ChangeStrategy`, `ChangeRule`, `ChangeRuleSet`, `CalculateChangeOptions`, and `AppliedChangeStrategy`. Strategies take a single `context` object (transaction, changeOwed, currency, denominations) so future inputs — a till's stock of each denomination, say — can be added without changing any strategy signature.
+- `app/lib/calculateChange.ts` is now just parsing + orchestration + formatting: `calculateChangeForTransaction` takes an optional third `CalculateChangeOptions` argument, calls `resolveChangeStrategy`, and validates the result with `assertBreakdownSums` — a central guard that every breakdown sums back to the change owed, so a buggy new strategy throws instead of silently short-changing a customer.
+- `ChangeResult` gained an `applied` field (`strategyId`, `strategyName`, `ruleId`, `wasOverridden`) recording which strategy ran and why. `isRandomized` is kept, now derived from the strategy's `isDeterministic` flag, so the existing tests and UI keep working.
+- `app/api/calculate/route.ts`: accepts an optional `strategyId` in the request body (validated against the registry, 400 on unknown) that overrides the rules for every line — the hook the future picker will drive. Also resolved the currency once before the loop and returned a 400 for an unsupported currency code; previously an unknown code produced `undefined` and crashed inside the calculation.
+
+**Adjacent fix:** unknown `body.currency` values used to reach `calculateChangeForTransaction` as `undefined`; now rejected with a clear 400.
+
+**Verified:** `npx tsc --noEmit` clean, `npx jest` 18/18 passing (8 pre-existing plus 10 new covering rule selection metadata, strategy override, custom divisors, rule priority, default fallback, runtime-registered strategies, and the sum guard). `npx eslint` reports only the pre-existing `useEffect` dependency warning in `FileUploadSection.tsx`.
+
+**Explicitly out of scope:** no UI for selecting a strategy — `Calculator.tsx`, `FileUploadSection.tsx`, and `advanced/page.tsx` were not touched.

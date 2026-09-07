@@ -118,19 +118,6 @@ export default function FileUploadSection({
     }
   };
 
-  // ctrl + enter key press event listener
-  useEffect(() => {
-    const handleCtrlEnterKeyPress = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key === "Enter") {
-        handleCalculateChange();
-      }
-    };
-    window.addEventListener("keydown", handleCtrlEnterKeyPress);
-    return () => {
-      window.removeEventListener("keydown", handleCtrlEnterKeyPress);
-    };
-  }, [file, currency, handleCalculateChange]);
-
   return (
     <div role="tabpanel" className="tab-content min-h-72 border-base-300 p-6">
       <div className="relative w-full min-h-56 border-2 border-dashed border-base-300 rounded-box p-8 flex flex-col items-center justify-center gap-2 text-base-content/60">

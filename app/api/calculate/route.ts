@@ -4,7 +4,9 @@ import {
   parseTransactionLine,
 } from "@/app/lib/calculateChange";
 import { DEFAULT_CURRENCY, CURRENCIES } from "@/app/lib/currencies";
+import { isChangeStrategyId } from "@/app/lib/strategies";
 import {
+  CalculateChangeOptions,
   CalculateErrorResponseBody,
   CalculateRequestBody,
   CalculateResponseBody,
@@ -30,18 +32,44 @@ export async function POST(request: Request) {
     );
   }
 
+  const currency: Currency | undefined = body.currency
+    ? CURRENCIES[body.currency]
+    : DEFAULT_CURRENCY;
+
+  if (!currency) {
+    return NextResponse.json<CalculateErrorResponseBody>(
+      { message: `Unsupported currency "${body.currency}".` },
+      { status: 400 },
+    );
+  }
+
+  // An explicit strategy bypasses the rules for every line — the hook a future
+  // strategy picker in the UI would use.
+  if (body.strategyId && !isChangeStrategyId(body.strategyId)) {
+    return NextResponse.json<CalculateErrorResponseBody>(
+      { message: `Unknown change strategy "${body.strategyId}".` },
+      { status: 400 },
+    );
+  }
+
+  const options: CalculateChangeOptions = body.strategyId
+    ? { strategyId: body.strategyId }
+    : {};
+
   try {
     const results = body.lines
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
-      .map((line) => {
-        const transaction = parseTransactionLine(line);
-        const currency: Currency = body.currency ? CURRENCIES[body.currency] : DEFAULT_CURRENCY;
-        return calculateChangeForTransaction(transaction, currency);
-      });
+      .map((line) =>
+        calculateChangeForTransaction(
+          parseTransactionLine(line),
+          currency,
+          options,
+        ),
+      );
 
     return NextResponse.json<CalculateResponseBody>({
-      message: `Calculated change for ${results.length} transaction(s) in ${body.currency || DEFAULT_CURRENCY.code}.`,
+      message: `Calculated change for ${results.length} transaction(s) in ${currency.code}.`,
       results,
     });
   } catch (error) {

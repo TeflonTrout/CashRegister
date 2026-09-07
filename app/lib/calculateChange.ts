@@ -1,13 +1,22 @@
+/**
+ * Parses transaction lines and turns them into change, delegating the actual
+ * denomination breakdown to a strategy (`strategies.ts`) chosen by a rule
+ * (`changeRules.ts`). Nothing in this file needs to change when a new
+ * strategy or rule is added.
+ */
+
 import {
+  AppliedChangeStrategy,
+  CalculateChangeOptions,
   ChangeLineItem,
   ChangeResult,
+  ChangeStrategy,
+  ChangeStrategyContext,
   Currency,
-  Denomination,
   Transaction,
 } from "./types";
-
-/** Owed amounts (in cents) divisible by this get a randomized breakdown. */
-const RANDOM_CHANGE_DIVISOR = 3;
+import { getChangeStrategy } from "./strategies";
+import { DEFAULT_CHANGE_RULE_SET, findMatchingRule } from "./changeRules";
 
 function centsFromDollars(value: number): number {
   return Math.round(value * 100);
@@ -35,78 +44,75 @@ export function parseTransactionLine(line: string): Transaction {
   };
 }
 
-function shuffle<T>(items: T[]): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-/** Fewest possible pieces of change, largest denomination first. */
-function minimumChangeBreakdown(
-  amountInCents: number,
-  denominations: Denomination[],
-): ChangeLineItem[] {
-  const sorted = [...denominations].sort(
-    (a, b) => b.valueInCents - a.valueInCents,
+/** Total value of a breakdown, in minor units. */
+export function totalBreakdownValue(breakdown: ChangeLineItem[]): number {
+  return breakdown.reduce(
+    (sum, { denomination, count }) => sum + denomination.valueInCents * count,
+    0,
   );
-  let remaining = amountInCents;
-  const breakdown: ChangeLineItem[] = [];
-
-  // Iterate through the sorted denominations and calculate the count of 
-  // each denomination needed to make the change.
-  for (const denomination of sorted) {
-    const count = Math.floor(remaining / denomination.valueInCents);
-    if (count > 0) {
-      breakdown.push({ denomination, count });
-      remaining -= count * denomination.valueInCents;
-    }
-  }
-
-  return breakdown;
 }
 
 /**
- * Random pieces of change that still sum to the exact amount owed. The
- * smallest denomination (assumed to have a value of 1, e.g. a penny) is
- * always applied last so it can absorb whatever remainder is left over.
+ * Guards the one invariant every strategy shares: the breakdown must sum back
+ * to the change owed. Checked centrally so a buggy new strategy surfaces as a
+ * clear error instead of silently short-changing a customer.
  */
-function randomChangeBreakdown(
-  amountInCents: number,
-  denominations: Denomination[],
-): ChangeLineItem[] {
-  const [smallest, ...rest] = [...denominations].sort(
-    (a, b) => a.valueInCents - b.valueInCents,
+function assertBreakdownSums(
+  breakdown: ChangeLineItem[],
+  context: ChangeStrategyContext,
+  strategy: ChangeStrategy,
+): void {
+  const total = totalBreakdownValue(breakdown);
+
+  if (total !== context.changeOwed) {
+    throw new Error(
+      `Strategy "${strategy.id}" produced ${total} but ${context.changeOwed} was owed.`,
+    );
+  }
+}
+
+/**
+ * Picks the strategy for a transaction: an explicit override wins, otherwise
+ * the first matching rule, otherwise the rule set's default.
+ */
+export function resolveChangeStrategy(
+  context: ChangeStrategyContext,
+  options: CalculateChangeOptions = {},
+): { strategy: ChangeStrategy; applied: AppliedChangeStrategy } {
+  if (options.strategyId) {
+    const strategy = getChangeStrategy(options.strategyId);
+    return {
+      strategy,
+      applied: {
+        strategyId: strategy.id,
+        strategyName: strategy.name,
+        ruleId: null,
+        wasOverridden: true,
+      },
+    };
+  }
+
+  const ruleSet = options.ruleSet ?? DEFAULT_CHANGE_RULE_SET;
+  const matchedRule = findMatchingRule(ruleSet, context);
+  const strategy = getChangeStrategy(
+    matchedRule?.strategyId ?? ruleSet.defaultStrategyId,
   );
-  const shuffledRest = shuffle(rest);
 
-  let remaining = amountInCents;
-  const breakdown: ChangeLineItem[] = [];
-
-  for (const denomination of shuffledRest) {
-    const maxCount = Math.floor(remaining / denomination.valueInCents);
-    const count = Math.floor(Math.random() * (maxCount + 1));
-    if (count > 0) {
-      breakdown.push({ denomination, count });
-      remaining -= count * denomination.valueInCents;
-    }
-  }
-
-  // The smallest denomination absorbs whatever remains exactly, rather than
-  // a random count, so the breakdown always sums back to amountInCents.
-  const finalCount = remaining / smallest.valueInCents;
-  if (finalCount > 0) {
-    breakdown.push({ denomination: smallest, count: finalCount });
-  }
-
-  return breakdown;
+  return {
+    strategy,
+    applied: {
+      strategyId: strategy.id,
+      strategyName: strategy.name,
+      ruleId: matchedRule?.id ?? null,
+      wasOverridden: false,
+    },
+  };
 }
 
 export function calculateChangeForTransaction(
   transaction: Transaction,
   currency: Currency,
+  options: CalculateChangeOptions = {},
 ): ChangeResult {
   const changeOwed = transaction.amountPaid - transaction.amountOwed;
 
@@ -114,12 +120,24 @@ export function calculateChangeForTransaction(
     throw new Error("Amount paid is less than amount owed.");
   }
 
-  const isRandomized = transaction.amountOwed % RANDOM_CHANGE_DIVISOR === 0;
-  const breakdown = isRandomized
-    ? randomChangeBreakdown(changeOwed, currency.denominations)
-    : minimumChangeBreakdown(changeOwed, currency.denominations);
+  const context: ChangeStrategyContext = {
+    transaction,
+    changeOwed,
+    currency,
+    denominations: currency.denominations,
+  };
 
-  return { transaction, changeOwed, breakdown, isRandomized };
+  const { strategy, applied } = resolveChangeStrategy(context, options);
+  const breakdown = strategy.buildBreakdown(context);
+  assertBreakdownSums(breakdown, context, strategy);
+
+  return {
+    transaction,
+    changeOwed,
+    breakdown,
+    applied,
+    isRandomized: !strategy.isDeterministic,
+  };
 }
 
 /** Formats a result as "1 dollar, 2 quarters, 1 nickel", per README. */

@@ -20,6 +20,8 @@ export default function Calculator({
 }) {
   const [input, setInput] = useState<string>("");
   const [results, setResults] = useState<ChangeResult[]>([]);
+  const [isAllSmallestChecked, setIsAllSmallestChecked] =
+    useState<boolean>(false);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
@@ -56,7 +58,7 @@ export default function Calculator({
   const handleCtrlEnterKeyPress = (
     event: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => {
-    if (event.ctrlKey && event.key === "Enter") {
+    if (event.ctrlKey || (event.metaKey && event.key === "Enter")) {
       handleCalculateChange();
     }
   };
@@ -82,6 +84,7 @@ export default function Calculator({
     const requestBody: CalculateRequestBody = {
       lines: getTransactionLines(input),
       currency,
+      strategyId: isAllSmallestChecked ? "allSmallest" : undefined,
     };
 
     const res = await fetch("/api/calculate", {
@@ -140,12 +143,26 @@ export default function Calculator({
         </fieldset>
       )}
 
+      <div className="flex items-center gap-2 mt-2">
+        <label htmlFor="allSmallest" className="label label-text">
+          All Smallest Change
+        </label>
+        <input
+          type="checkbox"
+          name="strategy"
+          value="allSmallest"
+          checked={isAllSmallestChecked}
+          onChange={(e) => setIsAllSmallestChecked(e.target.checked)}
+          className="checkbox checkbox-sm ml-4"
+        />
+      </div>
+
       <button
         type="button"
         className="btn btn-primary btn-wide mt-4"
         onClick={() => handleCalculateChange()}
       >
-        Calculate Change (Ctrl+Enter)
+        Calculate Change
       </button>
     </div>
   );
